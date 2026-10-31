@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPF Excel to TXT</title>
+<style>
+  :root {
+    --bg: #f3f5f2; --card: #ffffff; --ink: #1b2a27; --muted: #5d6c68; --line: #dfe5e2;
+    --pine: #0f5c4d; --pine-dark: #0a4338; --pine-soft: #e6f1ed;
+    --gold: #e8a317; --gold-soft: #fff7e3; --danger: #b42318; --danger-soft: #fdecea;
+    --radius: 16px; --shadow: 0 1px 2px rgba(27,42,39,.05), 0 8px 24px -10px rgba(27,42,39,.15);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink); min-height: 100vh;
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hidden { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; flex-shrink: 0; }
+
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
+  header h1 { margin: 0; font-size: 30px; line-height: 1.2; font-weight: 650; letter-spacing: -.01em; }
+  header p { margin: 8px 0 0; color: var(--muted); max-width: 520px; }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  header code { background: var(--pine-soft); color: var(--pine); padding: 1px 6px; border-radius: 6px; font-size: 14px; }
+
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; margin-top: 20px; }
+  .card h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .card .sub { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: inherit; font-weight: 600; font-size: 15px; cursor: pointer;
+    border-radius: 12px; padding: 11px 20px; border: 2px solid var(--pine);
+    background: transparent; color: var(--pine); transition: background .15s, box-shadow .15s;
+  }
+  .btn:hover { background: var(--pine-soft); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(15,92,77,.25); }
+  .btn svg { width: 18px; height: 18px; }
+  .btn.primary { background: var(--pine); color: #fff; padding: 13px 24px; }
+  .btn.primary:hover { background: var(--pine-dark); border-color: var(--pine-dark); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .drop {
+    display: block; margin-top: 16px; text-align: center; cursor: pointer;
+    border: 2px dashed rgba(15,92,77,.4); border-radius: 14px; background: var(--pine-soft);
+    padding: 36px 20px; transition: background .15s, border-color .15s;
+  }
+  .drop:hover { background: #dcece6; }
+  .drop:focus-within { box-shadow: 0 0 0 4px rgba(15,92,77,.25); }
+  .drop.active { border-color: var(--gold); background: var(--gold-soft); }
+  .drop svg { width: 40px; height: 40px; margin: 0 auto; color: var(--pine); }
+  .drop .title { margin: 10px 0 0; font-weight: 600; }
+  .drop .title u { color: var(--pine); }
+  .drop .hint { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+  #fileName { margin: 12px 0 0; font-size: 13px; color: var(--pine); font-weight: 600; }
+
+  .field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .field select {
+    font: inherit; width: 100%; min-width: 240px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid #c4cdc9; background: #fff; color: var(--ink);
+  }
+  .field select:focus { outline: none; border-color: var(--pine); box-shadow: 0 0 0 4px rgba(15,92,77,.2); }
+  #summary { font-size: 14px; color: var(--muted); margin: 0; }
+
+  .label { font-size: 14px; font-weight: 600; margin: 18px 0 8px; }
+  pre#preview {
+    margin: 0; padding: 16px; border-radius: 12px; background: #14201d; color: #cdeee3;
+    font: 13px/1.7 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    overflow: auto; max-height: 280px; white-space: pre;
+  }
+  .warn { margin-top: 16px; padding: 12px 16px; border-radius: 12px; background: var(--gold-soft); border: 1px solid #f0cf86; color: #6b4a00; font-size: 14px; }
+  .warn ul { margin: 0; padding-left: 18px; }
+
+  .ack { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; font-size: 14px; cursor: pointer; }
+  .ack input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--pine); flex-shrink: 0; }
+  .actions { margin-top: 22px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .actions small { color: var(--muted); font-size: 13px; }
+
+  .error {
+    margin-top: 20px; padding: 12px 16px; border-radius: 12px; font-size: 14px;
+    background: var(--danger-soft); border: 1px solid #f3b8b2; color: var(--danger);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  }
+  .error button { font: inherit; font-weight: 600; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; flex-shrink: 0; }
+
+  footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+  @media (max-width: 520px) {
+    .wrap { padding: 32px 16px 48px; }
+    .card { padding: 18px; }
+    .btn, .btn.primary { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>EPF Excel to TXT</h1>
+    <p>Turn your monthly EPF sheet into the <code>#~#</code> separated text file for the ECR upload.</p>
+  </header>
+
+  <div id="error" class="error hidden" role="alert">
+    <span id="errorText"></span>
+    <button id="errorClose" type="button">Dismiss</button>
+  </div>
+
+  <section class="card row">
+    <div>
+      <h2>Start with the template</h2>
+      <p class="sub">Same columns and layout as your EPF sheet, with sample rows.</p>
+    </div>
+    <button id="btnTemplate" type="button" class="btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+      Download template
+    </button>
+  </section>
+
+  <section class="card">
+    <h2>Upload your Excel file</h2>
+    <label id="dropzone" class="drop" for="fileInput">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16a4 4 0 01-.9-7.9A5 5 0 0116 6.5a4.5 4.5 0 011 8.9M12 12v8m0-8l-3 3m3-3l3 3"/></svg>
+      <p class="title">Drop your file here, or <u>browse</u></p>
+      <p class="hint">.xlsx or .xls</p>
+      <p id="fileName" class="mono hidden"></p>
+      <input id="fileInput" class="sr-only" type="file" accept=".xlsx,.xls">
+    </label>
+  </section>
+
+  <section id="resultCard" class="card hidden">
+    <div class="row" style="align-items:flex-end">
+      <div id="sheetWrap" class="field hidden">
+        <label for="sheetSelect">Sheet</label>
+        <select id="sheetSelect"></select>
+      </div>
+      <p id="summary"></p>
+    </div>
+
+    <div id="warnings" class="warn hidden"></div>
+    <label id="ackWrap" class="ack hidden"><input type="checkbox" id="ack"> <span>I reviewed these warnings and want to download anyway.</span></label>
+
+    <div class="label">Text file preview</div>
+    <pre id="preview"></pre>
+
+    <div class="actions">
+      <button id="btnDownload" type="button" class="btn primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 20h14"/></svg>
+        Generate &amp; Download .txt
+      </button>
+      <small>Rows without a UAN, and the Total row, are skipped.</small>
+    </div>
+  </section>
+
+  <footer>
+    Column order in the .txt: UAN, name, gross wages, EPF wages, EPS wages, EDLI wages, EPF contribution, EPS contribution, EPF-EPS difference, NCP days, refund of advances.
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function showError(msg) {
+    $('errorText').textContent = msg;
+    $('error').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function clearError() { $('error').classList.add('hidden'); }
+  $('errorClose').addEventListener('click', clearError);
+
+  // Load SheetJS: official CDN first, then fallbacks if blocked.
+  var SOURCES = [
+    'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  function loadLib(i) {
+    if (window.XLSX) return init();
+    if (i >= SOURCES.length) {
+      init();
+      return showError('Could not load the Excel library. Check your internet connection and reload.');
+    }
+    var s = document.createElement('script');
+    s.src = SOURCES[i];
+    s.onload = function () { window.XLSX ? init() : loadLib(i + 1); };
+    s.onerror = function () { loadLib(i + 1); };
+    document.head.appendChild(s);
+  }
+  loadLib(0);
+
+  function init() {
+    var SEP = '#~#';
+    var state = { wb: null, fileBase: 'EPF', lines: [], sheet: '', period: '' };
+    var norm = function (s) { return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, ''); };
+
+    function fieldForHeader(h) {
+      var n = norm(h);
+      if (!n) return null;
+      if (n === 'uan') return 'uan';
+      if (n === 'membername' || n === 'name') return 'name';
+      if (n === 'grosswages') return 'gross';
+      if (n === 'epfwages') return 'epfw';
+      if (n === 'epswages') return 'epsw';
+      if (n === 'edliwages') return 'edliw';
+      if (n.indexOf('epfepsdiff') === 0) return 'diff';
+      if (n.indexOf('epfcontri') === 0) return 'epfc';
+      if (n.indexOf('epscontri') === 0) return 'epsc';
+      if (n === 'ncpdays') return 'ncp';
+      if (n.indexOf('refundofadvance') === 0) return 'refund';
+      return null;
+    }
+    var REQUIRED = ['uan','name','gross','epfw','epsw','edliw','epfc','epsc','diff','ncp','refund'];
+    var LABELS = {
+      uan: 'UAN', name: 'MEMBER NAME', gross: 'GROSS WAGES', epfw: 'EPF WAGES', epsw: 'EPS WAGES',
+      edliw: 'EDLI WAGES', epfc: 'EPF CONTRI Employee', epsc: 'EPS CONTRI Employer',
+      diff: 'EPF EPS DIFF Employer', ncp: 'NCP DAYS', refund: 'REFUND OF ADVANCES'
+    };
+    function toInt(v) {
+      if (v === '' || v == null) return 0;
+      var n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
+      return isFinite(n) ? Math.round(n) : NaN;
+    }
+
+    /* template */
+    $('btnTemplate').addEventListener('click', function () {
+      try {
+        var head = ['', 'UAN', 'MEMBER NAME', 'GROSS WAGES', 'EPF WAGES', 'EPS WAGES', 'EDLI WAGES',
+          'Working Days', 'EPF CONTRI Employee', 'EPS CONTRI Employer', 'EPF EPS DIFF Employer',
+          'NCP DAYS', 'REFUND OF ADVANCES', '', 'Total Days'];
+        var rows = [
+          [], ['', 'Company Name'], [], ['', 'EPF DETAILS FOR THE MONTH SEPTEMBER 2026'], [], head,
+          ['', '100000000001', 'EMPLOYEE ONE', 14000, 11758, 11758, 11758, 26, 1411, 979, 432, 4, 0, '', 30],
+          ['', '100000000002', 'EMPLOYEE TWO', 13437, 13243, 13243, 13243, 25, 1589, 1103, 486, 5, 0, '', 30],
+          ['', '100000000003', 'EMPLOYEE THREE', 11700, 9974, 0, 9974, 22, 1197, 0, 1197, 8, 0, '', 30]
+        ];
+        var ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [2,16,22,13,12,12,12,13,20,20,22,10,20,3,11].map(function (w) { return { wch: w }; });
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'EPF');
+        XLSX.writeFile(wb, 'EPF_Template.xlsx');
+      } catch (e) { showError('Could not create the template: ' + e.message); }
+    });
+
+    /* upload */
+    var dz = $('dropzone');
+    ['dragenter', 'dragover'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add('active'); }); });
+    ['dragleave', 'drop'].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove('active'); }); });
+    dz.addEventListener('drop', function (e) { var f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+    $('fileInput').addEventListener('change', function (e) { var f = e.target.files[0]; if (f) handleFile(f); e.target.value = ''; });
+
+    function handleFile(file) {
+      clearError();
+      if (!/\.(xlsx|xls)$/i.test(file.name)) return showError('"' + file.name + '" is not an Excel file. Upload a .xlsx or .xls file.');
+      var reader = new FileReader();
+      reader.onerror = function () { showError('Could not read the file. Try again.'); };
+      reader.onload = function (e) {
+        try {
+          var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          if (!wb.SheetNames.length) return showError('This workbook has no sheets.');
+          state.wb = wb;
+          state.fileBase = file.name.replace(/\.[^.]+$/, '');
+          $('fileName').textContent = file.name;
+          $('fileName').classList.remove('hidden');
+          var sel = $('sheetSelect');
+          sel.innerHTML = '';
+          wb.SheetNames.forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+          $('sheetWrap').classList.toggle('hidden', wb.SheetNames.length < 2);
+          $('resultCard').classList.remove('hidden');
+          render();
+        } catch (err) { showError('This file is invalid or corrupted and could not be parsed.'); }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    $('sheetSelect').addEventListener('change', function () { clearError(); render(); });
+
+    /* convert */
+    function convertSheet(ws) {
+      var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+      if (!aoa.length) throw new Error('This sheet is empty.');
+      var hRow = -1, r, i;
+      for (r = 0; r < aoa.length; r++) {
+        if (aoa[r].some(function (c) { return norm(c) === 'uan'; })) { hRow = r; break; }
+      }
+      if (hRow < 0) throw new Error('No header row with a "UAN" column found. Use the template layout.');
+      var period = '', MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      for (r = 0; r < hRow && !period; r++) {
+        for (i = 0; i < aoa[r].length && !period; i++) {
+          var m = String(aoa[r][i]).match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?[\s,\-\/]*(\d{4})\b/i);
+          if (m) {
+            var mi = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[1].toLowerCase());
+            period = MONTHS[mi] + '_' + m[2];
+          }
+        }
+      }
+      var colMap = {};
+      aoa[hRow].forEach(function (h, idx) { var k = fieldForHeader(h); if (k && !(k in colMap)) colMap[k] = idx; });
+      var missing = REQUIRED.filter(function (k) { return !(k in colMap); });
+      if (missing.length) throw new Error('Missing columns: ' + missing.map(function (k) { return LABELS[k]; }).join(', ') + '.');
+
+      var lines = [], warnings = [], skipped = 0, numKeys = ['gross','epfw','epsw','edliw','epfc','epsc','diff','ncp','refund'];
+      for (r = hRow + 1; r < aoa.length; r++) {
+        var row = aoa[r];
+        var rawUan = row[colMap.uan];
+        var name = String(row[colMap.name] == null ? '' : row[colMap.name]).trim();
+        if (norm(rawUan) === 'total' || norm(name) === 'total') break;
+        var uan = String(rawUan == null ? '' : rawUan).replace(/\.0+$/, '').replace(/\s/g, '');
+        if (!uan) { if (row.some(function (c) { return c !== ''; })) skipped++; continue; }
+        var nums = {};
+        for (i = 0; i < numKeys.length; i++) {
+          var k = numKeys[i], v = toInt(row[colMap[k]]);
+          if (isNaN(v)) { warnings.push('Row ' + (r + 1) + ' (' + (name || uan) + '): "' + LABELS[k] + '" is not a number, set to 0.'); v = 0; }
+          nums[k] = v;
+        }
+        var who = 'Row ' + (r + 1) + ' (' + (name || uan) + '): ';
+        var near = function (a, b) { return Math.abs(a - b) <= 1; };
+        if (!near(nums.epfc, nums.epfw * 0.12)) warnings.push(who + 'EPF contribution ' + nums.epfc + ' is not 12% of EPF wages (expected about ' + Math.round(nums.epfw * 0.12) + ').');
+        if (!near(nums.epsc, nums.epsw * 0.0833)) warnings.push(who + 'EPS contribution ' + nums.epsc + ' is not 8.33% of EPS wages (expected about ' + Math.round(nums.epsw * 0.0833) + ').');
+        if (!near(nums.diff, nums.epfc - nums.epsc)) warnings.push(who + 'EPF-EPS diff ' + nums.diff + ' does not equal EPF contribution minus EPS contribution (' + (nums.epfc - nums.epsc) + ').');
+        if (nums.epsw > 15000) warnings.push(who + 'EPS wages ' + nums.epsw + ' exceed the 15,000 wage ceiling.');
+        if (nums.epfw > nums.gross) warnings.push(who + 'EPF wages are higher than gross wages.');
+        if (!/^\d{12}$/.test(uan)) warnings.push('Row ' + (r + 1) + ' (' + (name || uan) + '): UAN "' + uan + '" is not 12 digits.');
+        lines.push([uan, name.toUpperCase(), nums.gross, nums.epfw, nums.epsw, nums.edliw,
+          nums.epfc, nums.epsc, nums.diff, nums.ncp, nums.refund].join(SEP));
+      }
+      if (!lines.length) throw new Error('No employee rows found under the header.');
+      return { lines: lines, warnings: warnings, skipped: skipped, period: period };
+    }
+
+    function render() {
+      var name = $('sheetSelect').value || state.wb.SheetNames[0];
+      $('warnings').classList.add('hidden');
+      try {
+        var res = convertSheet(state.wb.Sheets[name]);
+        state.lines = res.lines; state.sheet = name; state.period = res.period;
+        $('preview').textContent = res.lines.join('\n');
+        $('summary').textContent = res.lines.length + ' employee ' + (res.lines.length === 1 ? 'row' : 'rows') + ' ready' + (res.skipped ? ', ' + res.skipped + ' skipped' : '');
+        $('btnDownload').disabled = res.warnings.length > 0;
+        $('ack').checked = false;
+        $('ackWrap').classList.toggle('hidden', res.warnings.length === 0);
+        if (res.warnings.length) {
+          $('warnings').innerHTML = '<ul>' + res.warnings.map(function (w) { return '<li>' + w.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>'; }).join('') + '</ul>';
+          $('warnings').classList.remove('hidden');
+        }
+      } catch (err) {
+        state.lines = [];
+        $('preview').textContent = '';
+        $('summary').textContent = '';
+        $('btnDownload').disabled = true;
+        $('ackWrap').classList.add('hidden');
+        showError('Sheet "' + name + '": ' + err.message);
+      }
+    }
+
+    /* download */
+    $('ack').addEventListener('change', function () { $('btnDownload').disabled = !this.checked; });
+    $('btnDownload').addEventListener('click', function () {
+      if ($('btnDownload').disabled) return;
+      if (!state.lines.length) return showError('Nothing to download. Pick a sheet with employee data.');
+      var blob = new Blob([state.lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = (state.period ? 'EPF_' + state.period : state.fileBase + (state.wb.SheetNames.length > 1 ? '_' + state.sheet : '')).replace(/[\\\/:*?"<>|]/g, '_') + '.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
+  }
+})();
+</script>
+</body>
+</html>
